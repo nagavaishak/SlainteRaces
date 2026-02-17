@@ -62,7 +62,7 @@ const Admin = () => {
   }, [publicKey, treasury]);
 
   // Admin wallet restriction
-const ADMIN_WALLET = 'GDhW85eHVMUkGAAMvamVCM3KrqvryzgffyrpTjysLToU';
+const ADMIN_WALLET = '7z3Nou9pynNjBg4viYPY6LezzNjTgsinsGqZDCpAoSBo';
 const isAdmin = connected && publicKey?.toBase58() === ADMIN_WALLET;
 
   // Initialize config on-chain
