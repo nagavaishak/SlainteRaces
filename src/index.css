@@ -1,0 +1,287 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom dark scrollbar */
+* {
+  scrollbar-color: #1f2d40 #0a0e17;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0a0e17;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #1f2d40;
+  border-radius: 4px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #2a3f5f;
+}
+
+@layer base {
+  :root {
+    /* Bloomberg Terminal / Kalshi Dark Theme */
+    --background: 222 47% 5%;
+    --foreground: 210 40% 96%;
+
+    --card: 217 33% 11%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 220 39% 14%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 158 64% 52%;
+    --primary-foreground: 210 40% 96%;
+
+    --secondary: 45 87% 52%;
+    --secondary-foreground: 222 47% 5%;
+
+    --muted: 215 20% 35%;
+    --muted-foreground: 217 10% 58%;
+
+    --accent: 158 64% 52%;
+    --accent-foreground: 222 47% 5%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 96%;
+
+    --border: 217 27% 18%;
+    --input: 217 27% 18%;
+    --ring: 158 64% 52%;
+
+    --radius: 0.5rem;
+
+    /* Prediction Market Colors */
+    --racing-green: 158 100% 33%;
+    --gold: 45 79% 53%;
+    
+    --price-up: 142 76% 45%;
+    --price-down: 0 84% 60%;
+    --price-neutral: 215 20% 65%;
+    
+    --bet-yes: 142 76% 45%;
+    --bet-yes-foreground: 210 40% 96%;
+    --bet-no: 0 84% 60%;
+    --bet-no-foreground: 210 40% 96%;
+    
+    /* Card elevations */
+    --elevated: 220 26% 16%;
+    
+    /* Probability bar unfilled */
+    --probability-track: #1f2d40;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Dark header */
+.hero-animated-bg {
+  background: #0a0e17;
+}
+
+.bg-gradient-hero {
+  background: #0a0e17;
+  border-bottom: 1px solid #1f2d40;
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, hsl(158 64% 52%) 0%, hsl(158 54% 42%) 100%);
+}
+
+.bg-gradient-gold {
+  background: hsl(45 79% 53%);
+}
+
+.bg-racing-green {
+  background: hsl(158 100% 33%);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, hsl(45 79% 53%), hsl(35 75% 58%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.shadow-gold {
+  box-shadow: 0 4px 14px 0 hsl(45 79% 53% / 0.3);
+}
+
+.shadow-card {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.shadow-elevated {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.card-hover:hover {
+  box-shadow: 0 0 0 1px hsl(158 64% 52% / 0.2);
+  transition: all 0.2s ease;
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-horse {
+  display: inline-block;
+  animation: horse-bounce 2s ease-in-out infinite;
+}
+
+@keyframes horse-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-medal {
+  display: inline-block;
+  animation: medal-shine 3s ease-in-out infinite;
+}
+
+@keyframes medal-shine {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.1) rotate(-5deg);
+  }
+  75% {
+    transform: scale(1.1) rotate(5deg);
+  }
+}
+
+.animate-pulse-live {
+  animation: pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-live {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Sparkline animations */
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-draw-line {
+  stroke-dasharray: 1000;
+  animation: draw-line 1.5s ease-out forwards;
+}
+
+/* Count up animation */
+@keyframes count-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-count-up {
+  animation: count-up 0.6s ease-out;
+}
+
+/* Slide in from right */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s ease-out;
+}
+
+/* Flash yellow */
+@keyframes flash-yellow {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: hsl(45 79% 53% / 0.2);
+  }
+}
+
+.animate-flash-yellow {
+  animation: flash-yellow 0.6s ease-out;
+}
+
+/* Probability bar transition */
+.probability-bar {
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Betting slip professional styling */
+.betting-slip {
+  background: #111827;
+  border: 1px solid #1f2d40;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.betting-slip:hover {
+  box-shadow: 0 0 0 1px #00a86b40;
+}
+
+/* Wallet button styling override */
+.wallet-adapter-button {
+  background-color: #111827 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #1f2d40 !important;
+}
+
+.wallet-adapter-button:hover {
+  background-color: #1a2235 !important;
+}
+
+.wallet-adapter-button-trigger {
+  background-color: #111827 !important;
+}
