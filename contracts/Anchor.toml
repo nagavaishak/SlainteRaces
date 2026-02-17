@@ -1,0 +1,21 @@
+[toolchain]
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+workspace = "BPUdzBSLs2MptKdJZ68hkyMAVdWsotYWLCcSfrQ4AurG"
+
+[programs.devnet]
+workspace = "BPUdzBSLs2MptKdJZ68hkyMAVdWsotYWLCcSfrQ4AurG"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "./target/wallet/wallet.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
