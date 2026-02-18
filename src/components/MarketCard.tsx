@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, TrendingUp, Users, Share2, ChevronDown, ChevronUp } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import { Clock, Share2 } from 'lucide-react';
 import { lamportsToSol } from '@/lib/solana';
 import type { Race } from '@/lib/supabase';
 import BetModal from './BetModal';
@@ -14,342 +11,205 @@ interface MarketCardProps {
   index?: number;
 }
 
-// Hardcoded chart data for demo
-const chartDataMap: Record<string, Array<{ t: string; y: number }>> = {
-  'Fastnet Rock': [
-    { t: '9am', y: 50 }, { t: '10am', y: 52 }, { t: '11am', y: 51 }, { t: '12pm', y: 55 },
-    { t: '1pm', y: 58 }, { t: '2pm', y: 61 }, { t: '3pm', y: 65 }, { t: '4pm', y: 63 },
-    { t: '5pm', y: 68 }, { t: '6pm', y: 71 }, { t: 'now', y: 73 }
-  ],
-  'Tiger Roll': [
-    { t: '9am', y: 48 }, { t: '10am', y: 49 }, { t: '11am', y: 51 }, { t: '12pm', y: 50 },
-    { t: '1pm', y: 52 }, { t: '2pm', y: 51 }, { t: '3pm', y: 53 }, { t: '4pm', y: 54 },
-    { t: '5pm', y: 55 }, { t: '6pm', y: 54 }, { t: 'now', y: 55 }
-  ],
-  'Ruby Walsh': [
-    { t: '9am', y: 62 }, { t: '10am', y: 61 }, { t: '11am', y: 58 }, { t: '12pm', y: 56 },
-    { t: '1pm', y: 53 }, { t: '2pm', y: 50 }, { t: '3pm', y: 47 }, { t: '4pm', y: 44 },
-    { t: '5pm', y: 42 }, { t: '6pm', y: 41 }, { t: 'now', y: 40 }
-  ],
+const getProbabilities = (race: Race) => {
+  const yesPool = race.yes_pool || 0;
+  const noPool = race.no_pool || 0;
+  const totalPool = yesPool + noPool;
+
+  // Hardcoded demo probabilities
+  if (race.horse_name === 'Fastnet Rock') return { yes: 73, no: 27 };
+  if (race.horse_name === 'Tiger Roll') return { yes: 55, no: 45 };
+  if (race.horse_name === 'Ruby Walsh' || race.horse_name === 'Istabraq') return { yes: 40, no: 60 };
+  if (totalPool > 0) {
+    const yes = Math.round((yesPool / totalPool) * 100);
+    return { yes, no: 100 - yes };
+  }
+  return { yes: 50, no: 50 };
+};
+
+const getDemoVolume = (race: Race) => {
+  const yesPool = race.yes_pool || 0;
+  const noPool = race.no_pool || 0;
+  if (race.horse_name === 'Fastnet Rock') return 4270;
+  if (race.horse_name === 'Tiger Roll') return 2890;
+  if (race.horse_name === 'Ruby Walsh' || race.horse_name === 'Istabraq') return 1650;
+  return Math.round(lamportsToSol(yesPool + noPool) * 100) / 100;
+};
+
+const get24hChange = (horse_name: string) => {
+  if (horse_name === 'Fastnet Rock') return +23;
+  if (horse_name === 'Tiger Roll') return +7;
+  if (horse_name === 'Ruby Walsh' || horse_name === 'Istabraq') return -20;
+  return 0;
 };
 
 const MarketCard = ({ race, onBetPlaced, index = 0 }: MarketCardProps) => {
   const [betModalOpen, setBetModalOpen] = useState(false);
   const [blinkModalOpen, setBlinkModalOpen] = useState(false);
   const [selectedPrediction, setSelectedPrediction] = useState<'yes' | 'no' | null>(null);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [countdown, setCountdown] = useState('');
 
-  const yesPool = race.yes_pool || 0;
-  const noPool = race.no_pool || 0;
-  const totalPool = yesPool + noPool;
-  
-  // Hardcoded probabilities for demo
-  let yesPercentage = 50;
-  let noPercentage = 50;
-  
-  if (race.horse_name === 'Fastnet Rock') {
-    yesPercentage = 73;
-    noPercentage = 27;
-  } else if (race.horse_name === 'Tiger Roll') {
-    yesPercentage = 55;
-    noPercentage = 45;
-  } else if (race.horse_name === 'Ruby Walsh' || race.horse_name === 'Istabraq') {
-    yesPercentage = 40;
-    noPercentage = 60;
-  } else if (totalPool > 0) {
-    yesPercentage = Math.round((yesPool / totalPool) * 100);
-    noPercentage = 100 - yesPercentage;
-  }
-  
-  // Hardcoded volume for demo
-  let volumeEuros = 0;
-  if (race.horse_name === 'Fastnet Rock') {
-    volumeEuros = 4270;
-  } else if (race.horse_name === 'Tiger Roll') {
-    volumeEuros = 2890;
-  } else if (race.horse_name === 'Ruby Walsh' || race.horse_name === 'Istabraq') {
-    volumeEuros = 1650;
-  }
-  
-  // Force Fastnet Rock to be live
+  const { yes: yesPercentage, no: noPercentage } = getProbabilities(race);
+  const volume = getDemoVolume(race);
+  const change24h = get24hChange(race.horse_name);
   const isLive = race.horse_name === 'Fastnet Rock' || race.status === 'live';
+  const isSettled = race.status === 'settled';
 
-  // Calculate share prices (probability in cents)
-  const yesPrice = (yesPercentage / 100).toFixed(2);
-  const noPrice = (noPercentage / 100).toFixed(2);
-
-  // Get chart data
-  const chartData = chartDataMap[race.horse_name] || chartDataMap['Tiger Roll'];
-  const priceChange = chartData[chartData.length - 1].y - chartData[0].y;
-  const priceChangePercent = ((priceChange / chartData[0].y) * 100).toFixed(0);
-  const isPositive = priceChange > 0;
-
-  // Calculate countdown to race time
   useEffect(() => {
     const updateCountdown = () => {
-      // Force Fastnet Rock to show LIVE NOW
-      if (race.horse_name === 'Fastnet Rock' || race.status === 'live') {
-        setCountdown('LIVE NOW');
-        return;
-      }
-      
-      if (race.status === 'settled') {
-        setCountdown('SETTLED');
-        return;
-      }
+      if (isLive) { setCountdown('LIVE'); return; }
+      if (isSettled) { setCountdown('Settled'); return; }
 
       const raceTime = new Date(race.race_time).getTime();
-      const now = Date.now();
-      const diff = raceTime - now;
+      const diff = raceTime - Date.now();
 
-      if (diff <= 0) {
-        setCountdown('Starting...');
-        return;
-      }
+      if (diff <= 0) { setCountdown('Starting...'); return; }
 
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setCountdown(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
     };
 
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [race.race_time, race.status, race.horse_name]);
+  }, [race.race_time, isLive, isSettled]);
 
   const handleBuyClick = (prediction: 'yes' | 'no') => {
     setSelectedPrediction(prediction);
     setBetModalOpen(true);
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
+  const volumeDisplay = typeof volume === 'number' && volume >= 1
+    ? `€${volume.toLocaleString()}`
+    : `${lamportsToSol((race.yes_pool || 0) + (race.no_pool || 0)).toFixed(2)} SOL`;
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: index * 0.05 }}
-        className="betting-slip rounded-lg p-5 card-hover"
+      <div
+        className="market-card card-hover rounded-lg flex flex-col"
+        style={{
+          background: '#1a1a1a',
+          border: '1px solid #2a2a2a',
+          animationDelay: `${index * 40}ms`,
+        }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          {isLive && (
-            <span className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-bold bg-destructive/10 text-destructive animate-pulse-live">
-              <div className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
-              🔴 LIVE
-            </span>
-          )}
-          {!isLive && race.status === 'upcoming' && (
-            <span className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-muted/30 text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              Starting Soon
-            </span>
-          )}
-          <div className="text-xs text-muted-foreground ml-auto">
-            {race.track_name} · {new Date(race.race_time).toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit' })}
+        {/* Card Header */}
+        <div className="px-4 pt-4 pb-3 flex items-center justify-between" style={{ borderBottom: '1px solid #2a2a2a' }}>
+          <div className="flex items-center gap-2">
+            {isLive && (
+              <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#ff5152' }}>
+                <span
+                  className="w-1.5 h-1.5 rounded-full animate-pulse-live"
+                  style={{ background: '#ff5152', display: 'inline-block' }}
+                />
+                LIVE
+              </span>
+            )}
+            {!isLive && !isSettled && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                {countdown || 'Upcoming'}
+              </span>
+            )}
+            {isSettled && (
+              <span className="text-xs text-muted-foreground">Settled</span>
+            )}
           </div>
+          <span className="text-xs text-muted-foreground">{race.track_name}</span>
         </div>
 
         {/* Question */}
-        <h3 className="text-base font-semibold text-foreground mb-4 leading-snug">
-          {race.question}
-        </h3>
+        <div className="px-4 py-4 flex-1">
+          <p className="text-sm font-medium text-foreground leading-snug mb-5">
+            {race.question}
+          </p>
 
-        {/* Probability Display */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-bet-yes uppercase tracking-wider">YES</span>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-foreground tabular-nums">{yesPercentage}%</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                {yesPercentage >= 50 ? 'YES' : 'NO'} Leading
+          {/* Price Display — Kalshi style */}
+          <div className="flex items-stretch gap-2 mb-3">
+            <div className="flex-1 text-center py-2.5 rounded" style={{ background: '#00a86b18' }}>
+              <div className="text-2xl font-bold tabular-nums" style={{ color: '#00a86b' }}>
+                {yesPercentage}¢
               </div>
+              <div className="text-xs font-medium mt-0.5" style={{ color: '#00a86b' }}>YES</div>
             </div>
-            <span className="text-xs font-bold text-bet-no uppercase tracking-wider">NO</span>
+            <div className="flex-1 text-center py-2.5 rounded" style={{ background: '#ff515218' }}>
+              <div className="text-2xl font-bold tabular-nums" style={{ color: '#ff5152' }}>
+                {noPercentage}¢
+              </div>
+              <div className="text-xs font-medium mt-0.5" style={{ color: '#ff5152' }}>NO</div>
+            </div>
           </div>
 
-          {/* Probability Bar */}
-          <div className="relative h-2 rounded-full overflow-hidden" style={{ background: '#1f2d40' }}>
+          {/* Split bar */}
+          <div className="h-1 rounded-full overflow-hidden flex" style={{ background: '#2a2a2a' }}>
             <div
-              className="absolute left-0 top-0 h-full bg-bet-yes probability-bar"
-              style={{ width: `${yesPercentage}%` }}
+              className="h-full probability-bar"
+              style={{ width: `${yesPercentage}%`, background: '#00a86b' }}
             />
             <div
-              className="absolute right-0 top-0 h-full bg-bet-no probability-bar"
-              style={{ width: `${noPercentage}%` }}
+              className="h-full probability-bar"
+              style={{ width: `${noPercentage}%`, background: '#ff5152' }}
             />
-            <div className="absolute left-1/2 top-0 w-px h-full bg-foreground/30" />
           </div>
 
-          {/* Share Prices */}
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-semibold text-bet-yes">{yesPrice}¢/share</span>
-            <span className="text-sm font-semibold text-bet-no">{noPrice}¢/share</span>
-          </div>
-        </div>
-
-        {/* Sparkline Chart */}
-        <div className="mb-4 -mx-2">
-          <ResponsiveContainer width="100%" height={60}>
-            <LineChart data={chartData}>
-              <defs>
-                <linearGradient id={`gradient-${race.id}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#00a86b" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#00a86b" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Tooltip
-                content={({ payload }) => {
-                  if (payload && payload[0]) {
-                    return (
-                      <div className="bg-elevated border border-border rounded px-2 py-1 text-xs">
-                        <div className="font-semibold text-foreground">{payload[0].value}%</div>
-                        <div className="text-muted-foreground text-[10px]">{payload[0].payload.t}</div>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="y"
-                stroke="#00a86b"
-                strokeWidth={2}
-                dot={false}
-                fill={`url(#gradient-${race.id})`}
-                animationDuration={1500}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-          
-          <div className="flex items-center justify-center mt-1">
-            <span className={`text-xs font-semibold ${isPositive ? 'text-price-up' : 'text-price-down'}`}>
-              {isPositive ? '▲' : '▼'} {Math.abs(parseInt(priceChangePercent))}% today
+          {/* Stats footer */}
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-xs text-muted-foreground">
+              Vol: <span className="text-foreground">{volumeDisplay}</span>
+            </span>
+            <span
+              className={`text-xs font-semibold tabular-nums ${change24h >= 0 ? 'text-price-up' : 'text-price-down'}`}
+            >
+              {change24h >= 0 ? '+' : ''}{change24h}% 24h
             </span>
           </div>
         </div>
 
-        {/* Market Stats */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground mb-4 pb-4 border-b border-border">
-          <div className="flex items-center gap-1">
-            <span className="font-mono">€{volumeEuros > 0 ? volumeEuros.toLocaleString() : lamportsToSol(totalPool).toFixed(0)}</span>
-            <span>volume</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            <span>{Math.floor(Math.random() * 200) + 50} positions</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <TrendingUp className="w-3 h-3" />
-            <span>{isPositive ? '+' : ''}{priceChangePercent}% 24h</span>
-          </div>
-        </div>
-
-        {/* Buy Buttons */}
-        {race.status !== 'settled' && (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <Button
+        {/* Card Footer — action buttons */}
+        {!isSettled ? (
+          <div className="px-4 pb-4 flex gap-2">
+            <button
               onClick={() => handleBuyClick('yes')}
               disabled={!race.onchain_race_id}
-              className="bg-bet-yes hover:bg-bet-yes/90 text-bet-yes-foreground font-bold py-6 text-sm transition-all hover:scale-[1.02]"
+              className="flex-1 py-2.5 rounded text-sm font-bold transition-all hover:opacity-90 disabled:opacity-40"
+              style={{ background: '#00a86b', color: '#fff' }}
             >
-              BUY YES {yesPrice}¢
-            </Button>
-            <Button
+              Buy YES
+            </button>
+            <button
               onClick={() => handleBuyClick('no')}
               disabled={!race.onchain_race_id}
-              className="bg-bet-no hover:bg-bet-no/90 text-bet-no-foreground font-bold py-6 text-sm transition-all hover:scale-[1.02]"
+              className="flex-1 py-2.5 rounded text-sm font-bold transition-all hover:opacity-90 disabled:opacity-40"
+              style={{ background: '#ff5152', color: '#fff' }}
             >
-              BUY NO {noPrice}¢
-            </Button>
+              Buy NO
+            </button>
+            <button
+              onClick={() => setBlinkModalOpen(true)}
+              className="p-2.5 rounded transition-colors text-muted-foreground hover:text-foreground"
+              style={{ border: '1px solid #2a2a2a' }}
+              title="Share Blink"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
           </div>
-        )}
-
-        {race.status === 'settled' && race.result && (
-          <div className={`mb-4 p-3 rounded-lg text-center font-bold ${
-            race.result === 'yes' ? 'bg-bet-yes/20 text-bet-yes' : 'bg-bet-no/20 text-bet-no'
-          }`}>
-            {race.result === 'yes' ? '✅ YES Resolved' : '❌ NO Resolved'}
+        ) : race.result ? (
+          <div className="px-4 pb-4">
+            <div
+              className="py-2 rounded text-center text-sm font-bold"
+              style={
+                race.result === 'yes'
+                  ? { background: '#00a86b18', color: '#00a86b' }
+                  : { background: '#ff515218', color: '#ff5152' }
+              }
+            >
+              {race.result === 'yes' ? '✓ YES Resolved' : '✗ NO Resolved'}
+            </div>
           </div>
-        )}
-
-        {/* Accordion Sections */}
-        <div className="space-y-2">
-          {/* Form Guide */}
-          <button
-            onClick={() => toggleSection('form')}
-            className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <span>🐎</span>
-              Form Guide
-            </span>
-            {expandedSection === 'form' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-          {expandedSection === 'form' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-muted/20 rounded p-3 text-xs space-y-2"
-            >
-              <div className="font-semibold text-foreground">{race.horse_name}</div>
-              <div className="text-muted-foreground">
-                Last 5: <span className="text-bet-yes">1st</span> · <span className="text-bet-yes">1st</span> · <span className="text-secondary">3rd</span> · <span className="text-muted">2nd</span> · <span className="text-bet-yes">1st</span>
-              </div>
-              <div className="text-muted-foreground">
-                At {race.track_name}: 3 wins from 4 starts ⭐
-              </div>
-            </motion.div>
-          )}
-
-          {/* Market Analysis */}
-          <button
-            onClick={() => toggleSection('analysis')}
-            className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <span>📈</span>
-              Market Analysis
-            </span>
-            {expandedSection === 'analysis' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-          {expandedSection === 'analysis' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-muted/20 rounded p-3 text-xs space-y-2"
-            >
-              <div className="text-muted-foreground">
-                Smart money moved in at 1pm — YES jumped 7% in 20 minutes
-              </div>
-              <div className="text-muted-foreground">
-                {yesPercentage + 8}% of large positions (&gt;€50) are on YES
-              </div>
-            </motion.div>
-          )}
-
-          {/* Share Blink */}
-          <button
-            onClick={() => setBlinkModalOpen(true)}
-            className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <Share2 className="w-3 h-3" />
-              Share Blink
-            </span>
-            <span className="text-racing-green">→</span>
-          </button>
-        </div>
-      </motion.div>
+        ) : null}
+      </div>
 
       <BetModal
         open={betModalOpen}

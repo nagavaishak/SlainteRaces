@@ -1,82 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom dark scrollbar */
+/* Scrollbar */
 * {
-  scrollbar-color: #1f2d40 #0a0e17;
+  scrollbar-color: #2a2a2a #0f0f0f;
   scrollbar-width: thin;
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-track {
-  background: #0a0e17;
+  background: #0f0f0f;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #1f2d40;
-  border-radius: 4px;
+  background: #2a2a2a;
+  border-radius: 3px;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #2a3f5f;
+  background: #3a3a3a;
 }
 
 @layer base {
   :root {
-    /* Bloomberg Terminal / Kalshi Dark Theme */
-    --background: 222 47% 5%;
+    --background: 0 0% 6%;
     --foreground: 210 40% 96%;
 
-    --card: 217 33% 11%;
+    --card: 0 0% 10%;
     --card-foreground: 210 40% 96%;
 
-    --popover: 220 39% 14%;
+    --popover: 0 0% 10%;
     --popover-foreground: 210 40% 96%;
 
-    --primary: 158 64% 52%;
-    --primary-foreground: 210 40% 96%;
+    --primary: 158 100% 33%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 87% 52%;
-    --secondary-foreground: 222 47% 5%;
+    --secondary: 45 79% 53%;
+    --secondary-foreground: 0 0% 6%;
 
-    --muted: 215 20% 35%;
-    --muted-foreground: 217 10% 58%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 53%;
 
-    --accent: 158 64% 52%;
-    --accent-foreground: 222 47% 5%;
+    --accent: 158 100% 33%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 96%;
+    --destructive: 0 100% 66%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217 27% 18%;
-    --input: 217 27% 18%;
-    --ring: 158 64% 52%;
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 158 100% 33%;
 
-    --radius: 0.5rem;
+    --radius: 8px;
 
-    /* Prediction Market Colors */
     --racing-green: 158 100% 33%;
     --gold: 45 79% 53%;
-    
-    --price-up: 142 76% 45%;
-    --price-down: 0 84% 60%;
-    --price-neutral: 215 20% 65%;
-    
-    --bet-yes: 142 76% 45%;
-    --bet-yes-foreground: 210 40% 96%;
-    --bet-no: 0 84% 60%;
-    --bet-no-foreground: 210 40% 96%;
-    
-    /* Card elevations */
-    --elevated: 220 26% 16%;
-    
-    /* Probability bar unfilled */
-    --probability-track: #1f2d40;
+
+    --price-up: 158 100% 33%;
+    --price-down: 0 100% 66%;
+    --price-neutral: 0 0% 53%;
+
+    --bet-yes: 158 100% 33%;
+    --bet-yes-foreground: 0 0% 100%;
+    --bet-no: 0 100% 66%;
+    --bet-no-foreground: 0 0% 100%;
+
+    --elevated: 0 0% 13%;
+    --probability-track: #2a2a2a;
   }
 }
 
@@ -86,98 +83,39 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-}
-
-/* Dark header */
-.hero-animated-bg {
-  background: #0a0e17;
-}
-
-.bg-gradient-hero {
-  background: #0a0e17;
-  border-bottom: 1px solid #1f2d40;
-}
-
-.bg-gradient-primary {
-  background: linear-gradient(135deg, hsl(158 64% 52%) 0%, hsl(158 54% 42%) 100%);
-}
-
-.bg-gradient-gold {
-  background: hsl(45 79% 53%);
-}
-
-.bg-racing-green {
-  background: hsl(158 100% 33%);
-}
-
-.text-gradient-gold {
-  background: linear-gradient(135deg, hsl(45 79% 53%), hsl(35 75% 58%));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.shadow-gold {
-  box-shadow: 0 4px 14px 0 hsl(45 79% 53% / 0.3);
-}
-
-.shadow-card {
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-}
-
-.shadow-elevated {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-}
-
-.card-hover:hover {
-  box-shadow: 0 0 0 1px hsl(158 64% 52% / 0.2);
-  transition: all 0.2s ease;
 }
 
 /* Animations */
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.2s ease-out;
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.animate-horse {
-  display: inline-block;
-  animation: horse-bounce 2s ease-in-out infinite;
+.animate-slide-in-up {
+  animation: slide-in-up 0.25s ease-out;
 }
 
-@keyframes horse-bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-medal {
-  display: inline-block;
-  animation: medal-shine 3s ease-in-out infinite;
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
 }
 
-@keyframes medal-shine {
-  0%, 100% {
-    transform: scale(1) rotate(0deg);
-  }
-  25% {
-    transform: scale(1.1) rotate(-5deg);
-  }
-  75% {
-    transform: scale(1.1) rotate(5deg);
-  }
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .animate-pulse-live {
@@ -185,103 +123,63 @@
 }
 
 @keyframes pulse-live {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-/* Sparkline animations */
-@keyframes draw-line {
-  from {
-    stroke-dashoffset: 1000;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-.animate-draw-line {
-  stroke-dasharray: 1000;
-  animation: draw-line 1.5s ease-out forwards;
-}
-
-/* Count up animation */
-@keyframes count-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-count-up {
-  animation: count-up 0.6s ease-out;
-}
-
-/* Slide in from right */
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.4s ease-out;
-}
-
-/* Flash yellow */
-@keyframes flash-yellow {
-  0%, 100% {
-    background-color: transparent;
-  }
-  50% {
-    background-color: hsl(45 79% 53% / 0.2);
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .animate-flash-yellow {
   animation: flash-yellow 0.6s ease-out;
 }
 
-/* Probability bar transition */
+@keyframes flash-yellow {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: hsl(45 79% 53% / 0.15); }
+}
+
+/* Probability bar */
 .probability-bar {
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Betting slip professional styling */
-.betting-slip {
-  background: #111827;
-  border: 1px solid #1f2d40;
-  border-radius: 12px;
-  transition: all 0.2s ease;
+/* Card hover */
+.card-hover {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.betting-slip:hover {
-  box-shadow: 0 0 0 1px #00a86b40;
+.card-hover:hover {
+  border-color: #2a2a2a;
+  box-shadow: 0 0 0 1px #00a86b20;
 }
 
-/* Wallet button styling override */
+/* Market card hover reveal */
+.market-card-actions {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.market-card:hover .market-card-actions {
+  opacity: 1;
+}
+
+/* Wallet adapter overrides */
 .wallet-adapter-button {
-  background-color: #111827 !important;
+  background-color: #1a1a1a !important;
   color: #f1f5f9 !important;
-  border: 1px solid #1f2d40 !important;
+  border: 1px solid #2a2a2a !important;
+  border-radius: 8px !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  height: 36px !important;
+  padding: 0 12px !important;
+  transition: border-color 0.15s ease !important;
 }
 
 .wallet-adapter-button:hover {
-  background-color: #1a2235 !important;
+  background-color: #222222 !important;
+  border-color: #3a3a3a !important;
 }
 
 .wallet-adapter-button-trigger {
-  background-color: #111827 !important;
+  background-color: #1a1a1a !important;
 }
