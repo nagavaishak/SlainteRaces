@@ -6,12 +6,33 @@ import { Button } from '@/components/ui/button';
 import Header from '@/components/Header';
 import MarketCard from '@/components/MarketCard';
 import BetModal from '@/components/BetModal';
+import LiveBetsFeed from '@/components/LiveBetsFeed';
 import { useRaces } from '@/hooks/useRaces';
 import { requestAirdrop } from '@/lib/solana';
 import { useToast } from '@/hooks/use-toast';
 import type { Race } from '@/lib/supabase';
 
 type FilterTab = 'all' | 'live' | 'upcoming' | 'settled';
+
+const TICKER = "🐎 Séamus just backed Fastnet Rock YES at 73¢  ·  🐳 Large position: 150 NO shares in Tiger Roll  ·  📈 Fastnet Rock up +23% today  ·  🏆 Aoife won €34.50 on Sea The Stars  ·  Pádraig backed Tiger Roll NO at 45¢  ·  ⚡ 2,847 traders active today  ·  🍀 €124,450 in volume this week  ·  Ciarán backed Fairyhouse Phantom YES at 55¢  ·  Niamh collected €92 from Leopardstown race  ·  ";
+
+const TickerTape = () => (
+  <div
+    className="ticker-wrap h-8 flex items-center"
+    style={{ background: '#141414', borderTop: '1px solid #2a2a2a', borderBottom: '1px solid #2a2a2a' }}
+  >
+    {/* Fade edges */}
+    <div className="absolute left-0 top-0 bottom-0 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, #141414, transparent)' }} />
+    <div className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, #141414, transparent)' }} />
+    <div className="ticker-track">
+      {[TICKER, TICKER].map((t, i) => (
+        <span key={i} className="text-xs px-8" style={{ color: '#666' }}>
+          {t}
+        </span>
+      ))}
+    </div>
+  </div>
+);
 
 // ─── Probability helper ───────────────────────────────────────────────────────
 const getProbs = (race: Race) => {
@@ -40,7 +61,16 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Nav */}
-      <header style={{ background: 'rgba(15,15,15,0.85)', borderBottom: '1px solid #2a2a2a', backdropFilter: 'blur(8px)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header
+        style={{
+          background: 'rgba(15,15,15,0.85)',
+          borderBottom: '1px solid #2a2a2a',
+          backdropFilter: 'blur(8px)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-2">
@@ -55,25 +85,21 @@ const LandingPage = () => {
       </header>
 
       {/* Hero */}
-      <section className="relative flex-1 flex flex-col min-h-[88vh]">
-        {/* Background image */}
+      <section className="relative flex flex-col" style={{ minHeight: '88vh' }}>
         <div
           className="absolute inset-0"
           style={{
             backgroundImage: "url('/hero-bg.jpg')",
             backgroundSize: 'cover',
             backgroundPosition: 'center 30%',
-            backgroundRepeat: 'no-repeat',
           }}
         />
-        {/* Dark overlay — strong at top and bottom, lighter in middle */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(to bottom, rgba(15,15,15,0.92) 0%, rgba(15,15,15,0.60) 40%, rgba(15,15,15,0.80) 75%, rgba(15,15,15,1) 100%)',
+            background: 'linear-gradient(to bottom, rgba(15,15,15,0.92) 0%, rgba(15,15,15,0.58) 38%, rgba(15,15,15,0.78) 72%, rgba(15,15,15,1) 100%)',
           }}
         />
-        {/* Green tint */}
         <div
           className="absolute inset-0"
           style={{ background: 'radial-gradient(ellipse at 15% 60%, rgba(0,168,107,0.12) 0%, transparent 55%)' }}
@@ -81,7 +107,6 @@ const LandingPage = () => {
 
         {/* Hero content */}
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-20 text-center">
-          {/* Badge */}
           <div
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium mb-8"
             style={{ border: '1px solid #00a86b40', background: '#00a86b10', color: '#00a86b' }}
@@ -90,41 +115,35 @@ const LandingPage = () => {
             Live on Solana Devnet · Ireland's First
           </div>
 
-          {/* Headline */}
           <h1
             className="font-extrabold text-foreground leading-tight mb-5"
             style={{ fontSize: 'clamp(36px, 7vw, 68px)', maxWidth: '800px' }}
           >
             Ireland's{' '}
-            <span style={{
-              background: 'linear-gradient(90deg, #00a86b, #34d399)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}>
+            <span
+              style={{
+                background: 'linear-gradient(90deg, #00a86b, #34d399)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
               Prediction Market
             </span>
           </h1>
 
-          {/* Sub */}
-          <p
-            className="text-muted-foreground mb-10 leading-relaxed"
-            style={{ fontSize: '17px', maxWidth: '500px' }}
-          >
+          <p className="text-muted-foreground mb-10 leading-relaxed" style={{ fontSize: '17px', maxWidth: '500px' }}>
             Trade horse race outcomes on-chain. Parimutuel payouts, instant settlement, no bookmaker.
           </p>
 
-          {/* CTA */}
           <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
-            {/* Hidden real wallet button */}
             <div className="hidden"><WalletMultiButton /></div>
             <button
               onClick={handleConnectClick}
               className="flex items-center gap-2 px-7 py-3.5 rounded-lg font-bold text-white transition-all hover:opacity-90"
               style={{ background: '#00a86b', fontSize: '15px', boxShadow: '0 0 32px rgba(0,168,107,0.35)' }}
             >
-              Connect Wallet
-              <ArrowRight className="w-4 h-4" />
+              Connect Wallet <ArrowRight className="w-4 h-4" />
             </button>
             <a
               href="#markets"
@@ -135,28 +154,36 @@ const LandingPage = () => {
             </a>
           </div>
 
-          {/* Trust row */}
           <div className="flex items-center gap-5 flex-wrap justify-center" style={{ color: '#555', fontSize: '13px' }}>
             <span>🔒 Non-custodial</span>
-            <span style={{ color: '#2a2a2a' }}>·</span>
+            <span style={{ color: '#333' }}>·</span>
             <span>⚡ Instant settlement</span>
-            <span style={{ color: '#2a2a2a' }}>·</span>
+            <span style={{ color: '#333' }}>·</span>
             <span>🇮🇪 Built for Ireland</span>
           </div>
         </div>
 
-        {/* Stats strip at bottom of hero */}
+        {/* Ticker tape — bottom of hero */}
+        <div className="relative z-10">
+          <TickerTape />
+        </div>
+
+        {/* Stats strip */}
         <div
-          className="relative z-10 grid grid-cols-2 sm:grid-cols-4 divide-x"
-          style={{ borderTop: '1px solid #2a2a2a', background: 'rgba(15,15,15,0.90)', backdropFilter: 'blur(8px)', divideColor: '#2a2a2a' }}
+          className="relative z-10 grid grid-cols-2 sm:grid-cols-4"
+          style={{ background: 'rgba(15,15,15,0.95)', borderBottom: '1px solid #2a2a2a' }}
         >
           {[
             { label: 'Irish gambling market', value: '€5.5B' },
             { label: 'Crypto platforms before us', value: '0', accent: '#00a86b' },
             { label: 'Diaspora worldwide', value: '1.5M' },
             { label: 'Traders this week', value: '2,847' },
-          ].map(s => (
-            <div key={s.label} className="px-6 py-5 text-center" style={{ borderColor: '#2a2a2a' }}>
+          ].map((s, i) => (
+            <div
+              key={s.label}
+              className="px-6 py-5 text-center"
+              style={{ borderLeft: i > 0 ? '1px solid #2a2a2a' : 'none' }}
+            >
               <p className="text-2xl font-bold tabular-nums" style={s.accent ? { color: s.accent } : { color: '#f1f5f9' }}>
                 {s.value}
               </p>
@@ -187,10 +214,15 @@ const LandingPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {races.map((race, i) => (
-                <ReadOnlyMarketCard key={race.id} race={race} index={i} onConnect={() => {
-                  const btn = document.querySelector('.wallet-adapter-button') as HTMLButtonElement;
-                  if (btn) btn.click();
-                }} />
+                <ReadOnlyMarketCard
+                  key={race.id}
+                  race={race}
+                  index={i}
+                  onConnect={() => {
+                    const btn = document.querySelector('.wallet-adapter-button') as HTMLButtonElement;
+                    if (btn) btn.click();
+                  }}
+                />
               ))}
             </div>
           )}
@@ -212,7 +244,10 @@ const LandingPage = () => {
                 className="relative rounded-lg p-5 overflow-hidden"
                 style={{ background: '#1a1a1a', border: '1px solid #2a2a2a' }}
               >
-                <span className="absolute -top-3 -right-1 text-6xl font-black pointer-events-none select-none" style={{ color: '#00a86b0d' }}>
+                <span
+                  className="absolute -top-3 -right-1 text-6xl font-black pointer-events-none select-none"
+                  style={{ color: '#00a86b0d' }}
+                >
                   {step.num}
                 </span>
                 <span className="text-2xl mb-4 block">{step.icon}</span>
@@ -228,14 +263,9 @@ const LandingPage = () => {
       <section className="py-16 text-center" style={{ borderTop: '1px solid #2a2a2a' }}>
         <div className="container mx-auto px-4">
           <h2 className="text-xl font-bold text-foreground mb-3">Ready to trade?</h2>
-          <p className="text-sm text-muted-foreground mb-7">
-            Connect your wallet and start trading Irish racing markets in seconds.
-          </p>
+          <p className="text-sm text-muted-foreground mb-7">Connect your wallet and start trading Irish racing markets in seconds.</p>
           <button
-            onClick={() => {
-              const btn = document.querySelector('.wallet-adapter-button') as HTMLButtonElement;
-              if (btn) btn.click();
-            }}
+            onClick={handleConnectClick}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg font-bold text-white transition-all hover:opacity-90"
             style={{ background: '#00a86b', fontSize: '15px' }}
           >
@@ -244,18 +274,11 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer style={{ borderTop: '1px solid #2a2a2a' }}>
         <div className="container mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span>🍀</span>
-            <span className="text-sm font-semibold text-foreground">Sláinte Races</span>
-          </div>
+          <div className="flex items-center gap-2"><span>🍀</span><span className="text-sm font-semibold text-foreground">Sláinte Races</span></div>
           <p className="text-xs text-muted-foreground">Built on Solana. Trade responsibly. 18+</p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Zap className="w-3 h-3 text-racing-green" />
-            Devnet
-          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground"><Zap className="w-3 h-3 text-racing-green" />Devnet</div>
         </div>
       </footer>
     </div>
@@ -320,7 +343,13 @@ const MarketsPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <div className="container mx-auto px-4 pt-6 pb-4">
+      {/* Ticker tape */}
+      <div className="relative">
+        <TickerTape />
+      </div>
+
+      {/* Page header */}
+      <div className="container mx-auto px-4 pt-5 pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-5">
           <div className="flex-1">
             <h1 className="text-xl font-bold text-foreground">Markets</h1>
@@ -372,44 +401,55 @@ const MarketsPage = () => {
         </div>
       </div>
 
+      {/* Main content — markets grid + live feed sidebar */}
       <div className="container mx-auto px-4 pb-12">
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="w-6 h-6 animate-spin text-racing-green" />
-          </div>
-        ) : filteredRaces.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-4xl mb-3">🐎</p>
-            <h3 className="text-base font-semibold text-foreground mb-1">No markets found</h3>
-            <p className="text-sm text-muted-foreground">{searchQuery ? 'Try a different search' : 'Check back later'}</p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredRaces.map((race, i) => (
-              <MarketCard key={race.id} race={race} onBetPlaced={refresh} index={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #2a2a2a' }}>
-            <table className="w-full">
-              <thead>
-                <tr style={{ background: '#1a1a1a', borderBottom: '1px solid #2a2a2a' }}>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Market</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Track</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">YES</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">NO</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Trade</th>
-                </tr>
-              </thead>
-              <tbody>
+        <div className="flex gap-6 items-start">
+          {/* Markets area */}
+          <div className="flex-1 min-w-0">
+            {loading ? (
+              <div className="flex items-center justify-center py-24">
+                <Loader2 className="w-6 h-6 animate-spin text-racing-green" />
+              </div>
+            ) : filteredRaces.length === 0 ? (
+              <div className="text-center py-24">
+                <p className="text-4xl mb-3">🐎</p>
+                <h3 className="text-base font-semibold text-foreground mb-1">No markets found</h3>
+                <p className="text-sm text-muted-foreground">{searchQuery ? 'Try a different search' : 'Check back later'}</p>
+              </div>
+            ) : viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredRaces.map((race, i) => (
-                  <ListMarketRow key={race.id} race={race} onBetPlaced={refresh} index={i} />
+                  <MarketCard key={race.id} race={race} onBetPlaced={refresh} index={i} />
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #2a2a2a' }}>
+                <table className="w-full">
+                  <thead>
+                    <tr style={{ background: '#1a1a1a', borderBottom: '1px solid #2a2a2a' }}>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">Market</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Track</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">YES</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">NO</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">Trade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRaces.map((race, i) => (
+                      <ListMarketRow key={race.id} race={race} onBetPlaced={refresh} index={i} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Live feed sidebar */}
+          <div className="hidden lg:block w-72 flex-shrink-0">
+            <LiveBetsFeed />
+          </div>
+        </div>
       </div>
 
       <footer style={{ borderTop: '1px solid #2a2a2a' }}>
