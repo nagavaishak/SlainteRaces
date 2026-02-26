@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 use ephemeral_rollups_sdk::anchor::{commit, delegate, ephemeral};
 use ephemeral_rollups_sdk::cpi::DelegateConfig;
-use ephemeral_rollups_sdk::ephem::{commit_accounts, commit_and_undelegate_accounts};
+use ephemeral_rollups_sdk::ephem::commit_and_undelegate_accounts;
 
 declare_id!("BPUdzBSLs2MptKdJZ68hkyMAVdWsotYWLCcSfrQ4AurG");
 
@@ -210,7 +210,7 @@ pub mod workspace {
         let race_id_bytes = ctx.accounts.race.race_id.to_le_bytes();
         let seeds: &[&[u8]] = &[b"vault", race_id_bytes.as_ref()];
 
-        ctx.accounts.delegate_pda(
+        ctx.accounts.delegate_vault(
             &ctx.accounts.payer,
             seeds,
             DelegateConfig {

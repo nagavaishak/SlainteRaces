@@ -25,4 +25,4 @@ anchor-spl = "0.31.1"
 mpl-token-metadata = "5"
 # MagicBlock Ephemeral Rollups SDK — enables delegation of race pool PDAs to ERs
 # for 10ms in-play betting latency during live races
-ephemeral-rollups-sdk = { version = "0.2", features = ["cpi"] }
+ephemeral-rollups-sdk = { version = "0.2", features = ["anchor"] }
