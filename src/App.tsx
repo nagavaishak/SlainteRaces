@@ -12,7 +12,6 @@ import Dashboard from './pages/Dashboard';
 import LeaderboardPage from './pages/LeaderboardPage';
 import Admin from './pages/Admin';
 import Activity from './pages/Activity';
-import Ticketing from './pages/Ticketing';
 import NotFound from './pages/NotFound';
 
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -36,7 +35,6 @@ const App = () => {
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/activity" element={<Activity />} />
-            <Route path="/ticketing" element={<Ticketing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />

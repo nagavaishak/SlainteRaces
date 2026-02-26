@@ -127,34 +127,6 @@ https://dial.to/?action=solana-action:https://slainteraces.vercel.app/api/action
 
 ---
 
-## 🎟️ KYD Predictive Ticketing
-
-> Raceday tickets that unlock prediction market entries.
-
-**Concept:** KYD-issued NFT tickets for Leopardstown, Cheltenham, and Punchestown double as free bet allocations on Sláinte Races.
-
-```
-KYD Ticket NFT (Solana)
-        │
-        ▼ CPI: check_ticket_ownership()
-Sláinte Races Program
-        │
-        ▼ allocate_free_bet(0.5 SOL)
-User places bets with allocation
-        │
-        ▼ ClaimWinnings (1.2× multiplier for holders)
-        │
-        ▼ Post-race: ticket NFT metadata updated with results on-chain
-```
-
-**Benefits:**
-- Transforms passive spectators into active DeFi participants
-- 1.2× payout multiplier for ticket holders
-- Ticket becomes a permanent on-chain trophy with results embedded
-- See full concept at: https://slainteraces.vercel.app/ticketing
-
----
-
 ## 🏗️ Tech Stack
 
 | Layer | Technology |
@@ -227,7 +199,6 @@ npx vercel --prod
 |---|---|---|
 | Overall | Solana Foundation | Full product — resurrecting onchain horse racing |
 | Gaming | MagicBlock | Financialized prediction game with ER in-play betting |
-| Ticketing | KYD Labs | Predictive Ticketing — race tickets unlock bet entries |
 | Blinks | OrbitFlare | Resurrection of Solana Actions for prediction markets |
 
 ---
