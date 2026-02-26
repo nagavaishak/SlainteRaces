@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Loader2, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Confetti from './Confetti';
-import { buildPlaceBetTransaction, solToLamports, calculatePotentialPayout, lamportsToSol, connection } from '@/lib/solana';
+import { buildPlaceBetTransaction, solToLamports, calculatePotentialPayout, lamportsToSol } from '@/lib/solana';
+import { getConnectionForRace } from '@/lib/connections';
 import { recordBet, updateRacePools } from '@/lib/supabase';
 import type { Race } from '@/lib/supabase';
 
@@ -52,6 +53,10 @@ const BetModal = ({ open, onClose, race, prediction, onBetPlaced }: BetModalProp
     try {
       let signature = '';
       const isOnChain = race.onchain_race_id !== null && race.onchain_race_id !== undefined;
+      const isLive = race.horse_name === 'Fastnet Rock' || race.status === 'live';
+      // Live races route through MagicBlock Ephemeral Rollup (~10ms)
+      // Upcoming/settled races use standard Solana Devnet (~400ms)
+      const conn = getConnectionForRace(isLive);
 
       if (isOnChain && sendTransaction) {
         const transaction = await buildPlaceBetTransaction(
@@ -60,8 +65,8 @@ const BetModal = ({ open, onClose, race, prediction, onBetPlaced }: BetModalProp
           prediction === 'yes',
           amountLamports
         );
-        signature = await sendTransaction(transaction, connection);
-        await connection.confirmTransaction(signature, 'confirmed');
+        signature = await sendTransaction(transaction, conn);
+        await conn.confirmTransaction(signature, 'confirmed');
         setTxSignature(signature);
       } else {
         signature = `mock_devnet_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;

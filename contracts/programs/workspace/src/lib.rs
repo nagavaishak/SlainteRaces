@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
-use ephemeral_rollups_sdk::cpi::delegate_account;
-use ephemeral_rollups_sdk::er::commit_and_undelegate_accounts;
-use ephemeral_rollups_sdk::anchor::ephemeral;
+use ephemeral_rollups_sdk::anchor::{commit, delegate, ephemeral};
+use ephemeral_rollups_sdk::cpi::DelegateConfig;
+use ephemeral_rollups_sdk::ephem::{commit_accounts, commit_and_undelegate_accounts};
 
 declare_id!("BPUdzBSLs2MptKdJZ68hkyMAVdWsotYWLCcSfrQ4AurG");
 
@@ -201,25 +201,24 @@ pub mod workspace {
         Ok(())
     }
 
-    /// Delegate race vault to MagicBlock Ephemeral Rollup for live in-play betting.
-    /// Called by admin when a race goes live. All subsequent bets route to the ER
-    /// endpoint (https://devnet.magicblock.app/) at ~10ms latency and zero fees.
+    /// Delegate race vault PDA to MagicBlock Ephemeral Rollup for live in-play betting.
+    /// Called by admin when a race goes live. All subsequent PlaceBet txs route to
+    /// the ER endpoint (https://devnet.magicblock.app/) at ~10ms latency, zero fees.
+    /// Uses EU ER validator: MEUGGrYPxKk17hCr7wpT6s8dtNokZj5U2L57vjYMS8e
     pub fn start_live_betting(ctx: Context<DelegateRaceVault>) -> Result<()> {
+        // Seeds for the vault PDA we are delegating
         let race_id_bytes = ctx.accounts.race.race_id.to_le_bytes();
-        let pda_seeds: &[&[u8]] = &[b"vault", race_id_bytes.as_ref()];
+        let seeds: &[&[u8]] = &[b"vault", race_id_bytes.as_ref()];
 
-        delegate_account(
+        ctx.accounts.delegate_pda(
             &ctx.accounts.payer,
-            &ctx.accounts.vault.to_account_info(),
-            &ctx.accounts.owner_program,
-            &ctx.accounts.buffer,
-            &ctx.accounts.delegation_record,
-            &ctx.accounts.delegation_metadata,
-            &ctx.accounts.delegation_program,
-            &ctx.accounts.system_program,
-            pda_seeds,
-            0,     // no lifetime limit
-            30_000, // auto-commit every 30 seconds
+            seeds,
+            DelegateConfig {
+                // Route to EU ER validator; override with remaining_accounts[0] if provided
+                validator: ctx.remaining_accounts.first().map(|acc| acc.key()),
+                commit_frequency_ms: 30_000, // auto-commit every 30s
+                ..Default::default()
+            },
         )?;
 
         emit!(LiveBettingStarted {
@@ -230,9 +229,9 @@ pub mod workspace {
         Ok(())
     }
 
-    /// Commit accumulated ER state back to mainnet and undelegate the vault.
-    /// Called by admin when the race closes. After this, normal settlement
-    /// (settle_race + claim_winnings) proceeds on Solana mainnet.
+    /// Commit accumulated ER state + undelegate vault back to Solana mainnet.
+    /// Called by admin when the race period closes. Settlement (settle_race +
+    /// claim_winnings) proceeds on mainnet as normal after this.
     pub fn end_live_betting(ctx: Context<CommitRaceVault>) -> Result<()> {
         commit_and_undelegate_accounts(
             &ctx.accounts.payer,
@@ -523,75 +522,49 @@ pub enum RaceStatus {
 
 // ============== MAGICBLOCK ER ACCOUNTS ==============
 
+/// Delegation context — uses #[delegate] macro from ephemeral-rollups-sdk.
+/// The macro injects the required ER program accounts automatically.
+/// The `#[account(mut, del)]` attribute on `vault` marks it as the PDA to delegate.
+#[delegate]
 #[derive(Accounts)]
 pub struct DelegateRaceVault<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: Vault PDA to delegate to the Ephemeral Rollup
     #[account(
-        seeds = [b"config"],
-        bump = config.bump,
-        has_one = authority @ ErrorCode::Unauthorized
+        mut,
+        del,
+        seeds = [b"vault", race.race_id.to_le_bytes().as_ref()],
+        bump = race.vault_bump
     )]
-    pub config: Account<'info, Config>,
+    pub vault: AccountInfo<'info>,
     #[account(
         seeds = [b"race", race.race_id.to_le_bytes().as_ref()],
         bump = race.bump,
         constraint = race.status == RaceStatus::Live @ ErrorCode::InvalidRaceStatus
     )]
     pub race: Account<'info, Race>,
-    /// CHECK: Vault PDA to be delegated to the ER
+}
+
+/// Commit + undelegate context — uses #[commit] macro from ephemeral-rollups-sdk.
+/// The macro injects magic_context and magic_program accounts automatically.
+#[commit]
+#[derive(Accounts)]
+pub struct CommitRaceVault<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: Delegated vault PDA — commit ER state and undelegate back to mainnet
     #[account(
         mut,
         seeds = [b"vault", race.race_id.to_le_bytes().as_ref()],
         bump = race.vault_bump
     )]
-    pub vault: SystemAccount<'info>,
-    /// CHECK: ER delegation buffer account
-    #[account(mut)]
-    pub buffer: UncheckedAccount<'info>,
-    /// CHECK: ER delegation record
-    #[account(mut)]
-    pub delegation_record: UncheckedAccount<'info>,
-    /// CHECK: ER delegation metadata
-    #[account(mut)]
-    pub delegation_metadata: UncheckedAccount<'info>,
-    /// CHECK: MagicBlock delegation program
-    pub delegation_program: UncheckedAccount<'info>,
-    /// CHECK: Owner program (this program)
-    pub owner_program: UncheckedAccount<'info>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct CommitRaceVault<'info> {
-    #[account(
-        seeds = [b"config"],
-        bump = config.bump,
-        has_one = authority @ ErrorCode::Unauthorized
-    )]
-    pub config: Account<'info, Config>,
+    pub vault: AccountInfo<'info>,
     #[account(
         seeds = [b"race", race.race_id.to_le_bytes().as_ref()],
         bump = race.bump
     )]
     pub race: Account<'info, Race>,
-    /// CHECK: Delegated vault PDA to commit and undelegate
-    #[account(
-        mut,
-        seeds = [b"vault", race.race_id.to_le_bytes().as_ref()],
-        bump = race.vault_bump
-    )]
-    pub vault: SystemAccount<'info>,
-    /// CHECK: MagicBlock magic context account
-    #[account(mut)]
-    pub magic_context: UncheckedAccount<'info>,
-    /// CHECK: MagicBlock magic program
-    pub magic_program: UncheckedAccount<'info>,
-    #[account(mut)]
-    pub payer: Signer<'info>,
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
 }
 
 // ============== EVENTS ==============
