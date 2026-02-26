@@ -6,15 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Header from '@/components/Header';
 import { useRaces } from '@/hooks/useRaces';
-import { 
-  lamportsToSol, 
-  PROGRAM_ID, 
-  isConfigInitialized, 
+import {
+  lamportsToSol,
+  PROGRAM_ID,
+  isConfigInitialized,
   isRaceCreated,
   initializeConfig,
   createRaceOnChain,
   startRaceOnChain,
   settleRaceOnChain,
+  startLiveBetting,
+  endLiveBetting,
   getRacePDA,
   getVaultPDA
 } from '@/lib/solana';
@@ -30,6 +32,7 @@ const Admin = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedRace, setSelectedRace] = useState<Race | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [erActiveRaces, setErActiveRaces] = useState<Set<number>>(new Set());
   
   // Create race form
   const [newRace, setNewRace] = useState({
@@ -247,6 +250,40 @@ const isAdmin = connected && publicKey?.toBase58() === ADMIN_WALLET;
         description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive'
       });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleStartLiveBetting = async (race: Race) => {
+    if (!publicKey || !wallet.signTransaction || !wallet.signAllTransactions || !race.onchain_race_id) return;
+    setIsProcessing(true);
+    try {
+      await startLiveBetting(
+        { publicKey, signTransaction: wallet.signTransaction, signAllTransactions: wallet.signAllTransactions },
+        race.onchain_race_id
+      );
+      setErActiveRaces(prev => new Set(prev).add(race.onchain_race_id!));
+      toast({ title: '⚡ ER Active!', description: `${race.horse_name} vault delegated to MagicBlock. Bets now ~10ms.` });
+    } catch (error) {
+      toast({ title: 'Failed to start ER', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleEndLiveBetting = async (race: Race) => {
+    if (!publicKey || !wallet.signTransaction || !wallet.signAllTransactions || !race.onchain_race_id) return;
+    setIsProcessing(true);
+    try {
+      await endLiveBetting(
+        { publicKey, signTransaction: wallet.signTransaction, signAllTransactions: wallet.signAllTransactions },
+        race.onchain_race_id
+      );
+      setErActiveRaces(prev => { const s = new Set(prev); s.delete(race.onchain_race_id!); return s; });
+      toast({ title: 'ER Committed', description: `${race.horse_name} vault state committed back to Solana mainnet.` });
+    } catch (error) {
+      toast({ title: 'Failed to end ER', description: error instanceof Error ? error.message : 'Please try again.', variant: 'destructive' });
     } finally {
       setIsProcessing(false);
     }
@@ -695,6 +732,32 @@ const isAdmin = connected && publicKey?.toBase58() === ADMIN_WALLET;
                           </Button>
                         )}
                         
+                        {race.status === 'live' && race.race_pda && (
+                          erActiveRaces.has(race.onchain_race_id!) ? (
+                            <Button
+                              onClick={() => handleEndLiveBetting(race)}
+                              variant="outline"
+                              size="sm"
+                              disabled={isProcessing}
+                              style={{ borderColor: '#00a86b', color: '#00a86b' }}
+                            >
+                              {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 mr-1 fill-current" />}
+                              End ER
+                            </Button>
+                          ) : (
+                            <Button
+                              onClick={() => handleStartLiveBetting(race)}
+                              variant="outline"
+                              size="sm"
+                              disabled={isProcessing}
+                              style={{ borderColor: '#00a86b', color: '#00a86b' }}
+                            >
+                              {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 mr-1" />}
+                              ⚡ Start ER
+                            </Button>
+                          )
+                        )}
+
                         {race.status === 'live' && (
                           <Button
                             onClick={() => handleResolveClick(race)}
@@ -719,7 +782,7 @@ const isAdmin = connected && publicKey?.toBase58() === ADMIN_WALLET;
             <div>
               <h4 className="font-semibold text-foreground">On-Chain Workflow</h4>
               <p className="text-sm text-muted-foreground">
-                1. Initialize Config (once) → 2. Create Race in DB → 3. Deploy On-Chain → 4. Start Race → 5. Users Bet → 6. Resolve/Settle
+                1. Initialize Config (once) → 2. Create Race in DB → 3. Deploy On-Chain → 4. Start Race → 5. ⚡ Start ER (live betting) → 6. End ER → 7. Resolve/Settle
               </p>
             </div>
           </div>

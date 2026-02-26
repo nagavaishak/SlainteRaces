@@ -6,6 +6,9 @@
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
+  "docs": [
+    "MagicBlock Ephemeral Rollup marker — enables ER delegation on this program"
+  ],
   "instructions": [
     {
       "name": "claim_winnings",
@@ -223,6 +226,85 @@
       ]
     },
     {
+      "name": "end_live_betting",
+      "docs": [
+        "Commit accumulated ER state + undelegate vault back to Solana mainnet.",
+        "Called by admin when the race period closes. Settlement (settle_race +",
+        "claim_winnings) proceeds on mainnet as normal after this."
+      ],
+      "discriminator": [
+        177,
+        60,
+        165,
+        95,
+        36,
+        117,
+        106,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "race.race_id",
+                "account": "Race"
+              }
+            ]
+          }
+        },
+        {
+          "name": "race",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "race.race_id",
+                "account": "Race"
+              }
+            ]
+          }
+        },
+        {
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
+        },
+        {
+          "name": "magic_context",
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize_config",
       "discriminator": [
         208,
@@ -380,6 +462,43 @@
       ]
     },
     {
+      "name": "process_undelegation",
+      "discriminator": [
+        196,
+        28,
+        41,
+        206,
+        48,
+        37,
+        51,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "base_account",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_seeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    },
+    {
       "name": "settle_race",
       "discriminator": [
         172,
@@ -477,6 +596,220 @@
           "type": "bool"
         }
       ]
+    },
+    {
+      "name": "start_live_betting",
+      "docs": [
+        "Delegate race vault PDA to MagicBlock Ephemeral Rollup for live in-play betting.",
+        "Called by admin when a race goes live. All subsequent PlaceBet txs route to",
+        "the ER endpoint (https://devnet.magicblock.app/) at ~10ms latency, zero fees.",
+        "Uses EU ER validator: MEUGGrYPxKk17hCr7wpT6s8dtNokZj5U2L57vjYMS8e"
+      ],
+      "discriminator": [
+        135,
+        210,
+        60,
+        58,
+        228,
+        191,
+        185,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "buffer_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                154,
+                86,
+                229,
+                168,
+                17,
+                206,
+                13,
+                240,
+                251,
+                94,
+                68,
+                188,
+                160,
+                171,
+                155,
+                124,
+                49,
+                225,
+                253,
+                77,
+                92,
+                3,
+                230,
+                229,
+                35,
+                229,
+                67,
+                95,
+                235,
+                75,
+                86,
+                177
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegation_record_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "delegation_metadata_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "race.race_id",
+                "account": "Race"
+              }
+            ]
+          }
+        },
+        {
+          "name": "race",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "race.race_id",
+                "account": "Race"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner_program",
+          "address": "BPUdzBSLs2MptKdJZ68hkyMAVdWsotYWLCcSfrQ4AurG"
+        },
+        {
+          "name": "delegation_program",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
     },
     {
       "name": "start_race",
@@ -608,6 +941,32 @@
         167,
         178,
         91
+      ]
+    },
+    {
+      "name": "LiveBettingEnded",
+      "discriminator": [
+        38,
+        96,
+        79,
+        200,
+        251,
+        99,
+        239,
+        233
+      ]
+    },
+    {
+      "name": "LiveBettingStarted",
+      "discriminator": [
+        241,
+        176,
+        22,
+        58,
+        249,
+        122,
+        171,
+        70
       ]
     },
     {
@@ -849,6 +1208,38 @@
           {
             "name": "treasury",
             "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiveBettingEnded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "race_id",
+            "type": "u64"
+          },
+          {
+            "name": "ended_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LiveBettingStarted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "race_id",
+            "type": "u64"
+          },
+          {
+            "name": "started_at",
+            "type": "i64"
           }
         ]
       }

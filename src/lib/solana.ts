@@ -275,6 +275,77 @@ export async function startRaceOnChain(
   return tx;
 }
 
+// MagicBlock program addresses
+const DELEGATION_PROGRAM_ID = new PublicKey('DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh');
+const MAGIC_PROGRAM_ID = new PublicKey('Magic11111111111111111111111111111111111111');
+const MAGIC_CONTEXT_ID = new PublicKey('MagicContext1111111111111111111111111111111');
+
+// Start live betting — delegates vault PDA to MagicBlock ER for ~10ms in-play bets
+export async function startLiveBetting(
+  wallet: { publicKey: PublicKey; signTransaction: (tx: Transaction) => Promise<Transaction>; signAllTransactions: (txs: Transaction[]) => Promise<Transaction[]> },
+  raceId: number
+): Promise<string> {
+  const program = getProgram(wallet);
+
+  const [racePDA] = getRacePDA(raceId);
+  const [vaultPDA] = getVaultPDA(raceId);
+
+  // Buffer, delegation record, and delegation metadata PDAs (derived by delegation program)
+  const [bufferVault] = PublicKey.findProgramAddressSync(
+    [Buffer.from('buffer'), vaultPDA.toBuffer()],
+    DELEGATION_PROGRAM_ID
+  );
+  const [delegationRecordVault] = PublicKey.findProgramAddressSync(
+    [Buffer.from('delegation'), vaultPDA.toBuffer()],
+    DELEGATION_PROGRAM_ID
+  );
+  const [delegationMetadataVault] = PublicKey.findProgramAddressSync(
+    [Buffer.from('delegation-metadata'), vaultPDA.toBuffer()],
+    DELEGATION_PROGRAM_ID
+  );
+
+  const tx = await program.methods
+    .startLiveBetting()
+    .accounts({
+      payer: wallet.publicKey,
+      bufferVault,
+      delegationRecordVault,
+      delegationMetadataVault,
+      vault: vaultPDA,
+      race: racePDA,
+      ownerProgram: PROGRAM_ID,
+      delegationProgram: DELEGATION_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+    })
+    .rpc();
+
+  return tx;
+}
+
+// End live betting — commits ER state back to mainnet and undelegates vault
+export async function endLiveBetting(
+  wallet: { publicKey: PublicKey; signTransaction: (tx: Transaction) => Promise<Transaction>; signAllTransactions: (txs: Transaction[]) => Promise<Transaction[]> },
+  raceId: number
+): Promise<string> {
+  const program = getProgram(wallet);
+
+  const [racePDA] = getRacePDA(raceId);
+  const [vaultPDA] = getVaultPDA(raceId);
+
+  const tx = await program.methods
+    .endLiveBetting()
+    .accounts({
+      payer: wallet.publicKey,
+      vault: vaultPDA,
+      race: racePDA,
+      magicProgram: MAGIC_PROGRAM_ID,
+      magicContext: MAGIC_CONTEXT_ID,
+    })
+    .rpc();
+
+  return tx;
+}
+
 // Settle race (admin only)
 export async function settleRaceOnChain(
   wallet: { publicKey: PublicKey; signTransaction: (tx: Transaction) => Promise<Transaction>; signAllTransactions: (txs: Transaction[]) => Promise<Transaction[]> },
