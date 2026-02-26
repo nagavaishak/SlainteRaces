@@ -290,11 +290,12 @@ export async function startLiveBetting(
   const [racePDA] = getRacePDA(raceId);
   const [vaultPDA] = getVaultPDA(raceId);
 
-  // Buffer, delegation record, and delegation metadata PDAs (derived by delegation program)
+  // Buffer PDA: seeds = ["buffer", vault] with OUR program as authority
   const [bufferVault] = PublicKey.findProgramAddressSync(
     [Buffer.from('buffer'), vaultPDA.toBuffer()],
-    DELEGATION_PROGRAM_ID
+    PROGRAM_ID
   );
+  // Delegation record + metadata PDAs: derived by the delegation program
   const [delegationRecordVault] = PublicKey.findProgramAddressSync(
     [Buffer.from('delegation'), vaultPDA.toBuffer()],
     DELEGATION_PROGRAM_ID
