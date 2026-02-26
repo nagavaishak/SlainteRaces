@@ -1,8 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
+use ephemeral_rollups_sdk::cpi::delegate_account;
+use ephemeral_rollups_sdk::er::commit_and_undelegate_accounts;
+use ephemeral_rollups_sdk::anchor::ephemeral;
 
 declare_id!("BPUdzBSLs2MptKdJZ68hkyMAVdWsotYWLCcSfrQ4AurG");
 
+/// MagicBlock Ephemeral Rollup marker — enables ER delegation on this program
+#[ephemeral]
 #[program]
 pub mod workspace {
     use super::*;
@@ -193,6 +198,54 @@ pub mod workspace {
             settled_at: race.settled_at.unwrap(),
         });
         
+        Ok(())
+    }
+
+    /// Delegate race vault to MagicBlock Ephemeral Rollup for live in-play betting.
+    /// Called by admin when a race goes live. All subsequent bets route to the ER
+    /// endpoint (https://devnet.magicblock.app/) at ~10ms latency and zero fees.
+    pub fn start_live_betting(ctx: Context<DelegateRaceVault>) -> Result<()> {
+        let race_id_bytes = ctx.accounts.race.race_id.to_le_bytes();
+        let pda_seeds: &[&[u8]] = &[b"vault", race_id_bytes.as_ref()];
+
+        delegate_account(
+            &ctx.accounts.payer,
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.owner_program,
+            &ctx.accounts.buffer,
+            &ctx.accounts.delegation_record,
+            &ctx.accounts.delegation_metadata,
+            &ctx.accounts.delegation_program,
+            &ctx.accounts.system_program,
+            pda_seeds,
+            0,     // no lifetime limit
+            30_000, // auto-commit every 30 seconds
+        )?;
+
+        emit!(LiveBettingStarted {
+            race_id: ctx.accounts.race.race_id,
+            started_at: Clock::get()?.unix_timestamp,
+        });
+
+        Ok(())
+    }
+
+    /// Commit accumulated ER state back to mainnet and undelegate the vault.
+    /// Called by admin when the race closes. After this, normal settlement
+    /// (settle_race + claim_winnings) proceeds on Solana mainnet.
+    pub fn end_live_betting(ctx: Context<CommitRaceVault>) -> Result<()> {
+        commit_and_undelegate_accounts(
+            &ctx.accounts.payer,
+            vec![&ctx.accounts.vault.to_account_info()],
+            &ctx.accounts.magic_context,
+            &ctx.accounts.magic_program,
+        )?;
+
+        emit!(LiveBettingEnded {
+            race_id: ctx.accounts.race.race_id,
+            ended_at: Clock::get()?.unix_timestamp,
+        });
+
         Ok(())
     }
 
@@ -468,6 +521,79 @@ pub enum RaceStatus {
     Settled,
 }
 
+// ============== MAGICBLOCK ER ACCOUNTS ==============
+
+#[derive(Accounts)]
+pub struct DelegateRaceVault<'info> {
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+        has_one = authority @ ErrorCode::Unauthorized
+    )]
+    pub config: Account<'info, Config>,
+    #[account(
+        seeds = [b"race", race.race_id.to_le_bytes().as_ref()],
+        bump = race.bump,
+        constraint = race.status == RaceStatus::Live @ ErrorCode::InvalidRaceStatus
+    )]
+    pub race: Account<'info, Race>,
+    /// CHECK: Vault PDA to be delegated to the ER
+    #[account(
+        mut,
+        seeds = [b"vault", race.race_id.to_le_bytes().as_ref()],
+        bump = race.vault_bump
+    )]
+    pub vault: SystemAccount<'info>,
+    /// CHECK: ER delegation buffer account
+    #[account(mut)]
+    pub buffer: UncheckedAccount<'info>,
+    /// CHECK: ER delegation record
+    #[account(mut)]
+    pub delegation_record: UncheckedAccount<'info>,
+    /// CHECK: ER delegation metadata
+    #[account(mut)]
+    pub delegation_metadata: UncheckedAccount<'info>,
+    /// CHECK: MagicBlock delegation program
+    pub delegation_program: UncheckedAccount<'info>,
+    /// CHECK: Owner program (this program)
+    pub owner_program: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CommitRaceVault<'info> {
+    #[account(
+        seeds = [b"config"],
+        bump = config.bump,
+        has_one = authority @ ErrorCode::Unauthorized
+    )]
+    pub config: Account<'info, Config>,
+    #[account(
+        seeds = [b"race", race.race_id.to_le_bytes().as_ref()],
+        bump = race.bump
+    )]
+    pub race: Account<'info, Race>,
+    /// CHECK: Delegated vault PDA to commit and undelegate
+    #[account(
+        mut,
+        seeds = [b"vault", race.race_id.to_le_bytes().as_ref()],
+        bump = race.vault_bump
+    )]
+    pub vault: SystemAccount<'info>,
+    /// CHECK: MagicBlock magic context account
+    #[account(mut)]
+    pub magic_context: UncheckedAccount<'info>,
+    /// CHECK: MagicBlock magic program
+    pub magic_program: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 // ============== EVENTS ==============
 
 #[event]
@@ -514,6 +640,18 @@ pub struct WinningsClaimed {
     pub race_id: u64,
     pub user: Pubkey,
     pub payout: u64,
+}
+
+#[event]
+pub struct LiveBettingStarted {
+    pub race_id: u64,
+    pub started_at: i64,
+}
+
+#[event]
+pub struct LiveBettingEnded {
+    pub race_id: u64,
+    pub ended_at: i64,
 }
 
 // ============== ERRORS ==============

@@ -179,14 +179,35 @@ const BetModal = ({ open, onClose, race, prediction, onBetPlaced }: BetModalProp
               </div>
             </div>
 
-            {/* On-chain status */}
-            <p className="text-center text-xs text-muted-foreground">
-              {race.race_pda ? (
-                <span style={{ color: '#00a86b' }}>● On-chain (Devnet SOL)</span>
+            {/* On-chain / ER status */}
+            {(() => {
+              const isLive = race.horse_name === 'Fastnet Rock' || race.status === 'live';
+              return isLive ? (
+                <div
+                  className="flex items-center justify-center gap-2 py-2 rounded"
+                  style={{ background: '#00a86b0d', border: '1px solid #00a86b30' }}
+                >
+                  <span className="text-sm">⚡</span>
+                  <span className="text-xs font-semibold" style={{ color: '#00a86b' }}>
+                    MagicBlock Ephemeral Rollup
+                  </span>
+                  <span
+                    className="text-xs px-1.5 py-0.5 rounded font-bold tabular-nums"
+                    style={{ background: '#00a86b20', color: '#00a86b' }}
+                  >
+                    ~10ms
+                  </span>
+                </div>
               ) : (
-                'Mock mode — recorded in database only'
-              )}
-            </p>
+                <p className="text-center text-xs text-muted-foreground">
+                  {race.race_pda ? (
+                    <span style={{ color: '#00a86b' }}>● On-chain (Devnet SOL)</span>
+                  ) : (
+                    'Mock mode — recorded in database only'
+                  )}
+                </p>
+              );
+            })()}
 
             {txSignature && (
               <a

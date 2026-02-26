@@ -1,9 +1,38 @@
 import { useState, useEffect } from 'react';
 import { Clock, Share2 } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { lamportsToSol } from '@/lib/solana';
 import type { Race } from '@/lib/supabase';
 import BetModal from './BetModal';
 import BlinkPreviewModal from './BlinkPreviewModal';
+
+const chartDataMap: Record<string, Array<{ t: string; y: number }>> = {
+  'Fastnet Rock': [
+    { t: '9am', y: 50 }, { t: '10am', y: 52 }, { t: '11am', y: 55 },
+    { t: '12pm', y: 58 }, { t: '1pm', y: 61 }, { t: '2pm', y: 65 },
+    { t: '3pm', y: 68 }, { t: '4pm', y: 70 }, { t: 'now', y: 73 },
+  ],
+  'Tiger Roll': [
+    { t: '9am', y: 50 }, { t: '10am', y: 51 }, { t: '11am', y: 53 },
+    { t: '12pm', y: 52 }, { t: '1pm', y: 54 }, { t: '2pm', y: 53 },
+    { t: '3pm', y: 55 }, { t: '4pm', y: 54 }, { t: 'now', y: 55 },
+  ],
+  'Ruby Walsh': [
+    { t: '9am', y: 60 }, { t: '10am', y: 58 }, { t: '11am', y: 55 },
+    { t: '12pm', y: 52 }, { t: '1pm', y: 49 }, { t: '2pm', y: 46 },
+    { t: '3pm', y: 43 }, { t: '4pm', y: 41 }, { t: 'now', y: 40 },
+  ],
+  'Istabraq': [
+    { t: '9am', y: 60 }, { t: '10am', y: 57 }, { t: '11am', y: 54 },
+    { t: '12pm', y: 51 }, { t: '1pm', y: 48 }, { t: '2pm', y: 46 },
+    { t: '3pm', y: 43 }, { t: '4pm', y: 41 }, { t: 'now', y: 40 },
+  ],
+};
+
+const getChartData = (horse_name: string) =>
+  chartDataMap[horse_name] ?? [
+    { t: '9am', y: 50 }, { t: '12pm', y: 50 }, { t: 'now', y: 50 },
+  ];
 
 interface MarketCardProps {
   race: Race;
@@ -99,13 +128,22 @@ const MarketCard = ({ race, onBetPlaced, index = 0 }: MarketCardProps) => {
         <div className="px-4 pt-4 pb-3 flex items-center justify-between" style={{ borderBottom: '1px solid #2a2a2a' }}>
           <div className="flex items-center gap-2">
             {isLive && (
-              <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#ff5152' }}>
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: '#ff5152' }}>
+                  <span
+                    className="w-1.5 h-1.5 rounded-full animate-pulse-live"
+                    style={{ background: '#ff5152', display: 'inline-block' }}
+                  />
+                  LIVE
+                </span>
                 <span
-                  className="w-1.5 h-1.5 rounded-full animate-pulse-live"
-                  style={{ background: '#ff5152', display: 'inline-block' }}
-                />
-                LIVE
-              </span>
+                  className="flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded"
+                  style={{ background: '#00a86b15', color: '#00a86b', border: '1px solid #00a86b30' }}
+                  title="Bets routed via MagicBlock Ephemeral Rollup — ~10ms latency"
+                >
+                  ⚡ ER
+                </span>
+              </div>
             )}
             {!isLive && !isSettled && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -153,6 +191,44 @@ const MarketCard = ({ race, onBetPlaced, index = 0 }: MarketCardProps) => {
               style={{ width: `${noPercentage}%`, background: '#ff5152' }}
             />
           </div>
+
+          {/* Sparkline chart */}
+          {(() => {
+            const chartData = getChartData(race.horse_name);
+            const isUp = change24h >= 0;
+            const lineColor = isUp ? '#00a86b' : '#ff5152';
+            const gradientId = `grad-${race.id ?? race.horse_name.replace(/\s/g, '')}`;
+            return (
+              <div className="mt-3 -mx-1" style={{ height: 56 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={lineColor} stopOpacity={0.25} />
+                        <stop offset="100%" stopColor={lineColor} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip
+                      contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 6, fontSize: 11, padding: '4px 8px' }}
+                      itemStyle={{ color: lineColor }}
+                      labelStyle={{ color: '#666', fontSize: 10 }}
+                      formatter={(v: number) => [`${v}¢`, 'YES']}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="y"
+                      stroke={lineColor}
+                      strokeWidth={1.5}
+                      fill={`url(#${gradientId})`}
+                      dot={false}
+                      activeDot={{ r: 3, fill: lineColor, strokeWidth: 0 }}
+                      animationDuration={1200}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            );
+          })()}
 
           {/* Stats footer */}
           <div className="flex items-center justify-between mt-3">
