@@ -259,10 +259,14 @@ const isAdmin = connected && publicKey?.toBase58() === ADMIN_WALLET;
     if (!publicKey || !wallet.signTransaction || !wallet.signAllTransactions || !race.onchain_race_id) return;
     setIsProcessing(true);
     try {
-      await startLiveBetting(
-        { publicKey, signTransaction: wallet.signTransaction, signAllTransactions: wallet.signAllTransactions },
-        race.onchain_race_id
-      );
+      const w = { publicKey, signTransaction: wallet.signTransaction, signAllTransactions: wallet.signAllTransactions };
+      // Ensure race is Live on-chain first (may already be, ignore if so)
+      try {
+        await startRaceOnChain(w, race.onchain_race_id);
+      } catch {
+        // Already live on-chain — fine, continue
+      }
+      await startLiveBetting(w, race.onchain_race_id);
       setErActiveRaces(prev => new Set(prev).add(race.onchain_race_id!));
       toast({ title: '⚡ ER Active!', description: `${race.horse_name} vault delegated to MagicBlock. Bets now ~10ms.` });
     } catch (error) {
