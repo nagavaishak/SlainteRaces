@@ -228,9 +228,8 @@
     {
       "name": "end_live_betting",
       "docs": [
-        "Commit accumulated ER state + undelegate vault back to Solana mainnet.",
-        "Called by admin when the race period closes. Settlement (settle_race +",
-        "claim_winnings) proceeds on mainnet as normal after this."
+        "Commit accumulated ER state + undelegate race account back to Solana mainnet.",
+        "Settlement (settle_race + claim_winnings) proceeds on mainnet after this."
       ],
       "discriminator": [
         177,
@@ -249,30 +248,8 @@
           "signer": true
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "race.race_id",
-                "account": "Race"
-              }
-            ]
-          }
-        },
-        {
           "name": "race",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -600,10 +577,9 @@
     {
       "name": "start_live_betting",
       "docs": [
-        "Delegate race vault PDA to MagicBlock Ephemeral Rollup for live in-play betting.",
-        "Called by admin when a race goes live. All subsequent PlaceBet txs route to",
-        "the ER endpoint (https://devnet.magicblock.app/) at ~10ms latency, zero fees.",
-        "Uses EU ER validator: MEUGGrYPxKk17hCr7wpT6s8dtNokZj5U2L57vjYMS8e"
+        "Delegate race account PDA to MagicBlock Ephemeral Rollup for live in-play betting.",
+        "The race account (owned by our program) tracks yes_pool/no_pool — delegating it",
+        "lets the ER process pool updates at ~10ms. SOL custody remains on mainnet vault."
       ],
       "discriminator": [
         135,
@@ -622,7 +598,7 @@
           "signer": true
         },
         {
-          "name": "buffer_vault",
+          "name": "buffer_race",
           "writable": true,
           "pda": {
             "seeds": [
@@ -639,7 +615,7 @@
               },
               {
                 "kind": "account",
-                "path": "vault"
+                "path": "race"
               }
             ],
             "program": {
@@ -682,7 +658,7 @@
           }
         },
         {
-          "name": "delegation_record_vault",
+          "name": "delegation_record_race",
           "writable": true,
           "pda": {
             "seeds": [
@@ -703,7 +679,7 @@
               },
               {
                 "kind": "account",
-                "path": "vault"
+                "path": "race"
               }
             ],
             "program": {
@@ -713,7 +689,7 @@
           }
         },
         {
-          "name": "delegation_metadata_vault",
+          "name": "delegation_metadata_race",
           "writable": true,
           "pda": {
             "seeds": [
@@ -743,7 +719,7 @@
               },
               {
                 "kind": "account",
-                "path": "vault"
+                "path": "race"
               }
             ],
             "program": {
@@ -753,30 +729,8 @@
           }
         },
         {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "race.race_id",
-                "account": "Race"
-              }
-            ]
-          }
-        },
-        {
           "name": "race",
+          "writable": true,
           "pda": {
             "seeds": [
               {

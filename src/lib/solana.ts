@@ -294,7 +294,8 @@ const DELEGATION_PROGRAM_ID = new PublicKey('DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaA
 const MAGIC_PROGRAM_ID = new PublicKey('Magic11111111111111111111111111111111111111');
 const MAGIC_CONTEXT_ID = new PublicKey('MagicContext1111111111111111111111111111111');
 
-// Start live betting — delegates vault PDA to MagicBlock ER for ~10ms in-play bets
+// Start live betting — delegates RACE account (program-owned) to MagicBlock ER
+// Race account tracks yes_pool/no_pool; vault (system-owned) stays on mainnet
 export async function startLiveBetting(
   wallet: { publicKey: PublicKey; signTransaction: (tx: Transaction) => Promise<Transaction>; signAllTransactions: (txs: Transaction[]) => Promise<Transaction[]> },
   raceId: number
@@ -302,20 +303,19 @@ export async function startLiveBetting(
   const program = getProgram(wallet);
 
   const [racePDA] = getRacePDA(raceId);
-  const [vaultPDA] = getVaultPDA(raceId);
 
-  // Buffer PDA: seeds = ["buffer", vault] with OUR program as authority
-  const [bufferVault] = PublicKey.findProgramAddressSync(
-    [Buffer.from('buffer'), vaultPDA.toBuffer()],
+  // Buffer PDA: seeds = ["buffer", race_pda] derived by OUR program
+  const [bufferRace] = PublicKey.findProgramAddressSync(
+    [Buffer.from('buffer'), racePDA.toBuffer()],
     PROGRAM_ID
   );
-  // Delegation record + metadata PDAs: derived by the delegation program
-  const [delegationRecordVault] = PublicKey.findProgramAddressSync(
-    [Buffer.from('delegation'), vaultPDA.toBuffer()],
+  // Delegation record + metadata: derived by the delegation program
+  const [delegationRecordRace] = PublicKey.findProgramAddressSync(
+    [Buffer.from('delegation'), racePDA.toBuffer()],
     DELEGATION_PROGRAM_ID
   );
-  const [delegationMetadataVault] = PublicKey.findProgramAddressSync(
-    [Buffer.from('delegation-metadata'), vaultPDA.toBuffer()],
+  const [delegationMetadataRace] = PublicKey.findProgramAddressSync(
+    [Buffer.from('delegation-metadata'), racePDA.toBuffer()],
     DELEGATION_PROGRAM_ID
   );
 
@@ -323,10 +323,9 @@ export async function startLiveBetting(
     .startLiveBetting()
     .accounts({
       payer: wallet.publicKey,
-      bufferVault,
-      delegationRecordVault,
-      delegationMetadataVault,
-      vault: vaultPDA,
+      bufferRace,
+      delegationRecordRace,
+      delegationMetadataRace,
       race: racePDA,
       ownerProgram: PROGRAM_ID,
       delegationProgram: DELEGATION_PROGRAM_ID,
@@ -337,7 +336,7 @@ export async function startLiveBetting(
   return tx;
 }
 
-// End live betting — commits ER state back to mainnet and undelegates vault
+// End live betting — commits race account state back to mainnet and undelegates
 export async function endLiveBetting(
   wallet: { publicKey: PublicKey; signTransaction: (tx: Transaction) => Promise<Transaction>; signAllTransactions: (txs: Transaction[]) => Promise<Transaction[]> },
   raceId: number
@@ -345,13 +344,11 @@ export async function endLiveBetting(
   const program = getProgram(wallet);
 
   const [racePDA] = getRacePDA(raceId);
-  const [vaultPDA] = getVaultPDA(raceId);
 
   const tx = await program.methods
     .endLiveBetting()
     .accounts({
       payer: wallet.publicKey,
-      vault: vaultPDA,
       race: racePDA,
       magicProgram: MAGIC_PROGRAM_ID,
       magicContext: MAGIC_CONTEXT_ID,

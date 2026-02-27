@@ -218,22 +218,19 @@ pub mod workspace {
         Ok(())
     }
 
-    /// Delegate race vault PDA to MagicBlock Ephemeral Rollup for live in-play betting.
-    /// Called by admin when a race goes live. All subsequent PlaceBet txs route to
-    /// the ER endpoint (https://devnet.magicblock.app/) at ~10ms latency, zero fees.
-    /// Uses EU ER validator: MEUGGrYPxKk17hCr7wpT6s8dtNokZj5U2L57vjYMS8e
-    pub fn start_live_betting(ctx: Context<DelegateRaceVault>) -> Result<()> {
-        // Seeds for the vault PDA we are delegating
+    /// Delegate race account PDA to MagicBlock Ephemeral Rollup for live in-play betting.
+    /// The race account (owned by our program) tracks yes_pool/no_pool — delegating it
+    /// lets the ER process pool updates at ~10ms. SOL custody remains on mainnet vault.
+    pub fn start_live_betting(ctx: Context<DelegateRaceAccount>) -> Result<()> {
         let race_id_bytes = ctx.accounts.race.race_id.to_le_bytes();
-        let seeds: &[&[u8]] = &[b"vault", race_id_bytes.as_ref()];
+        let seeds: &[&[u8]] = &[b"race", race_id_bytes.as_ref()];
 
-        ctx.accounts.delegate_vault(
+        ctx.accounts.delegate_race(
             &ctx.accounts.payer,
             seeds,
             DelegateConfig {
-                // Route to EU ER validator; override with remaining_accounts[0] if provided
                 validator: ctx.remaining_accounts.first().map(|acc| acc.key()),
-                commit_frequency_ms: 30_000, // auto-commit every 30s
+                commit_frequency_ms: 30_000,
                 ..Default::default()
             },
         )?;
@@ -246,13 +243,12 @@ pub mod workspace {
         Ok(())
     }
 
-    /// Commit accumulated ER state + undelegate vault back to Solana mainnet.
-    /// Called by admin when the race period closes. Settlement (settle_race +
-    /// claim_winnings) proceeds on mainnet as normal after this.
-    pub fn end_live_betting(ctx: Context<CommitRaceVault>) -> Result<()> {
+    /// Commit accumulated ER state + undelegate race account back to Solana mainnet.
+    /// Settlement (settle_race + claim_winnings) proceeds on mainnet after this.
+    pub fn end_live_betting(ctx: Context<CommitRaceAccount>) -> Result<()> {
         commit_and_undelegate_accounts(
             &ctx.accounts.payer,
-            vec![&ctx.accounts.vault.to_account_info()],
+            vec![&ctx.accounts.race.to_account_info()],
             &ctx.accounts.magic_context,
             &ctx.accounts.magic_program,
         )?;
@@ -539,23 +535,16 @@ pub enum RaceStatus {
 
 // ============== MAGICBLOCK ER ACCOUNTS ==============
 
-/// Delegation context — uses #[delegate] macro from ephemeral-rollups-sdk.
-/// The macro injects the required ER program accounts automatically.
-/// The `#[account(mut, del)]` attribute on `vault` marks it as the PDA to delegate.
+/// Delegation context — delegates the Race account (program-owned) to the ER.
+/// The vault (system-owned) stays on mainnet; only pool tracking goes to ER.
 #[delegate]
 #[derive(Accounts)]
-pub struct DelegateRaceVault<'info> {
+pub struct DelegateRaceAccount<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    /// CHECK: Vault PDA to delegate to the Ephemeral Rollup
     #[account(
         mut,
         del,
-        seeds = [b"vault", race.race_id.to_le_bytes().as_ref()],
-        bump = race.vault_bump
-    )]
-    pub vault: AccountInfo<'info>,
-    #[account(
         seeds = [b"race", race.race_id.to_le_bytes().as_ref()],
         bump = race.bump,
         constraint = race.status == RaceStatus::Live @ ErrorCode::InvalidRaceStatus
@@ -563,21 +552,14 @@ pub struct DelegateRaceVault<'info> {
     pub race: Account<'info, Race>,
 }
 
-/// Commit + undelegate context — uses #[commit] macro from ephemeral-rollups-sdk.
-/// The macro injects magic_context and magic_program accounts automatically.
+/// Commit + undelegate context — commits race account state back from ER to mainnet.
 #[commit]
 #[derive(Accounts)]
-pub struct CommitRaceVault<'info> {
+pub struct CommitRaceAccount<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    /// CHECK: Delegated vault PDA — commit ER state and undelegate back to mainnet
     #[account(
         mut,
-        seeds = [b"vault", race.race_id.to_le_bytes().as_ref()],
-        bump = race.vault_bump
-    )]
-    pub vault: AccountInfo<'info>,
-    #[account(
         seeds = [b"race", race.race_id.to_le_bytes().as_ref()],
         bump = race.bump
     )]
