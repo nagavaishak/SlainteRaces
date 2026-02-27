@@ -65,7 +65,8 @@ const BetModal = ({ open, onClose, race, prediction, onBetPlaced }: BetModalProp
           prediction === 'yes',
           amountLamports
         );
-        signature = await sendTransaction(transaction, conn);
+        // Skip preflight simulation for ER — vault is delegated so base-chain simulation fails
+        signature = await sendTransaction(transaction, conn, { skipPreflight: isLive });
         await conn.confirmTransaction(signature, 'confirmed');
         setTxSignature(signature);
       } else {
