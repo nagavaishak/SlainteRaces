@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::pubkey;
 use anchor_lang::system_program;
 use ephemeral_rollups_sdk::anchor::{commit, delegate, ephemeral};
 use ephemeral_rollups_sdk::cpi::DelegateConfig;
@@ -198,6 +199,22 @@ pub mod workspace {
             settled_at: race.settled_at.unwrap(),
         });
         
+        Ok(())
+    }
+
+    /// Emergency authority migration — callable only by the program upgrade authority.
+    /// Transfers config.authority + treasury to a new wallet (e.g. migrating admin keys).
+    pub fn transfer_authority(ctx: Context<TransferAuthority>, new_authority: Pubkey) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+        config.authority = new_authority;
+        config.treasury = new_authority;
+        Ok(())
+    }
+
+    /// Emergency race authority migration — callable only by the program upgrade authority.
+    pub fn transfer_race_authority(ctx: Context<TransferRaceAuthority>, new_authority: Pubkey) -> Result<()> {
+        let race = &mut ctx.accounts.race;
+        race.authority = new_authority;
         Ok(())
     }
 
@@ -565,6 +582,25 @@ pub struct CommitRaceVault<'info> {
         bump = race.bump
     )]
     pub race: Account<'info, Race>,
+}
+
+// Upgrade authority — the wallet that deployed/upgrades the program
+const UPGRADE_AUTHORITY: Pubkey = pubkey!("3CagFPDrBbQ78RxzXNJE6ynC3q2SSmSnocARgbot4gSf");
+
+#[derive(Accounts)]
+pub struct TransferAuthority<'info> {
+    #[account(mut, seeds = [b"config"], bump = config.bump)]
+    pub config: Account<'info, Config>,
+    #[account(constraint = upgrade_authority.key() == UPGRADE_AUTHORITY @ ErrorCode::Unauthorized)]
+    pub upgrade_authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct TransferRaceAuthority<'info> {
+    #[account(mut, seeds = [b"race", race.race_id.to_le_bytes().as_ref()], bump = race.bump)]
+    pub race: Account<'info, Race>,
+    #[account(constraint = upgrade_authority.key() == UPGRADE_AUTHORITY @ ErrorCode::Unauthorized)]
+    pub upgrade_authority: Signer<'info>,
 }
 
 // ============== EVENTS ==============

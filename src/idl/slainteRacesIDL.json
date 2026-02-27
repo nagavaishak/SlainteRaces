@@ -873,6 +873,104 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "transfer_authority",
+      "docs": [
+        "Emergency authority migration — callable only by the program upgrade authority.",
+        "Transfers config.authority + treasury to a new wallet (e.g. migrating admin keys)."
+      ],
+      "discriminator": [
+        48,
+        169,
+        76,
+        72,
+        229,
+        180,
+        55,
+        161
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "upgrade_authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "transfer_race_authority",
+      "docs": [
+        "Emergency race authority migration — callable only by the program upgrade authority."
+      ],
+      "discriminator": [
+        16,
+        215,
+        51,
+        51,
+        133,
+        46,
+        93,
+        122
+      ],
+      "accounts": [
+        {
+          "name": "race",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  99,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "race.race_id",
+                "account": "Race"
+              }
+            ]
+          }
+        },
+        {
+          "name": "upgrade_authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
     }
   ],
   "accounts": [
