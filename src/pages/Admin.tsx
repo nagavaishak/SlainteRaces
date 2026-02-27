@@ -10,6 +10,7 @@ import {
   lamportsToSol,
   PROGRAM_ID,
   isConfigInitialized,
+  getConfigAuthority,
   isRaceCreated,
   initializeConfig,
   createRaceOnChain,
@@ -44,15 +45,20 @@ const Admin = () => {
 
   // On-chain state
   const [configInitialized, setConfigInitialized] = useState<boolean | null>(null);
+  const [configAuthority, setConfigAuthority] = useState<string | null>(null);
   const [initModalOpen, setInitModalOpen] = useState(false);
   const [feeBps, setFeeBps] = useState('250'); // 2.5%
   const [treasury, setTreasury] = useState('');
 
-  // Check config status on load
+  // Check config status on load + read on-chain authority
   useEffect(() => {
     const checkConfig = async () => {
       const initialized = await isConfigInitialized();
       setConfigInitialized(initialized);
+      if (initialized) {
+        const authority = await getConfigAuthority();
+        setConfigAuthority(authority);
+      }
     };
     checkConfig();
   }, []);
@@ -64,9 +70,12 @@ const Admin = () => {
     }
   }, [publicKey, treasury]);
 
-  // Admin wallet restriction
-const ADMIN_WALLET = '5SXCRj9Wom3YyCgqkpTqdrx5Ks9r2mKLRYZRVRrcNAo4';
-const isAdmin = connected && publicKey?.toBase58() === ADMIN_WALLET;
+  // Admin check: match hardcoded wallet OR on-chain config authority
+  const ADMIN_WALLET = '5SXCRj9Wom3YyCgqkpTqdrx5Ks9r2mKLRYZRVRrcNAo4';
+  const isAdmin = connected && publicKey && (
+    publicKey.toBase58() === ADMIN_WALLET ||
+    (configAuthority !== null && publicKey.toBase58() === configAuthority)
+  );
 
   // Initialize config on-chain
   const handleInitializeConfig = async () => {

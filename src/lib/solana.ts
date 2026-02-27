@@ -183,6 +183,20 @@ export async function claimWinningsTransaction(
   return tx;
 }
 
+// Get config authority (the wallet that initialized the program)
+export async function getConfigAuthority(): Promise<string | null> {
+  const [configPDA] = getConfigPDA();
+  try {
+    const accountInfo = await connection.getAccountInfo(configPDA);
+    if (!accountInfo) return null;
+    // Config layout: discriminator(8) + bump(1) + authority(32)
+    const authorityBytes = accountInfo.data.slice(9, 41);
+    return new PublicKey(authorityBytes).toBase58();
+  } catch {
+    return null;
+  }
+}
+
 // Check if config is initialized
 export async function isConfigInitialized(): Promise<boolean> {
   const [configPDA] = getConfigPDA();
